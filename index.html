@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Certificate Generator</title>
+
+  <!-- JS Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Pacifico&family=Open+Sans&family=Lobster&family=Montserrat&family=Raleway&family=Oswald&family=Merriweather&family=Indie+Flower&family=Quicksand&family=Poppins&family=Playfair+Display&family=Fira+Sans&family=Ubuntu&family=Bebas+Neue&family=Rubik&family=Anton&family=Baloo+2&family=Caveat&family=DM+Sans&family=Manrope&family=Titillium+Web&family=Zilla+Slab&display=swap" rel="stylesheet">
+
+
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; text-align: center; }
+    .container { max-width: 600px; margin: auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); }
+    input, select, button { margin: 10px 0; padding: 10px; width: 100%; border-radius: 5px; border: 1px solid #ccc; font-size: 1em; }
+    button { background: #28a745; color: white; cursor: pointer; border: none; }
+    button:hover { background: #218838; }
+    label { font-weight: bold; text-align: left; display: block; margin-top: 10px; }
+    canvas { width: 100%; border: 1px solid #ddd; border-radius: 5px; margin-top: 10px; }
+    .slider-container { display: flex; align-items: center; margin: 10px 0; }
+    .slider-container label { flex: 1; }
+    .slider-container input { flex: 2; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Certificate Generator (Real-time Preview)</h2>
+    
+    <label>Upload Excel File:</label>
+    <input type="file" id="excelFile" accept=".xlsx, .xls" />
+
+    <label>Upload Certificate Template:</label>
+    <input type="file" id="templateFile" accept="image/png, image/jpeg" onchange="previewTemplate()" />
+
+    <label>Font Style:</label>
+    <select id="fontStyle" onchange="drawPreview()">
+<!-- Web Safe Fonts -->
+<option value="Arial">Arial</option>
+<option value="'Helvetica', sans-serif">Helvetica</option>
+<option value="'Times New Roman', serif">Times New Roman</option>
+<option value="'Georgia', serif">Georgia</option>
+<option value="'Courier New', monospace">Courier New</option>
+<option value="'Verdana', sans-serif">Verdana</option>
+<option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+<option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino Linotype</option>
+<option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
+<option value="'Impact', Charcoal, sans-serif">Impact</option>
+
+<!-- Google Fonts -->
+<option value="'Roboto', sans-serif">Roboto</option>
+<option value="'Pacifico', cursive">Pacifico</option>
+<option value="'Open Sans', sans-serif">Open Sans</option>
+<option value="'Lobster', cursive">Lobster</option>
+<option value="'Montserrat', sans-serif">Montserrat</option>
+<option value="'Raleway', sans-serif">Raleway</option>
+<option value="'Oswald', sans-serif">Oswald</option>
+<option value="'Merriweather', serif">Merriweather</option>
+<option value="'Indie Flower', cursive">Indie Flower</option>
+<option value="'Quicksand', sans-serif">Quicksand</option>
+<option value="'Poppins', sans-serif">Poppins</option>
+
+<!-- Fancy/Display Fonts -->
+<option value="'Comic Sans MS', cursive, sans-serif">Comic Sans MS</option>
+<option value="'Brush Script MT', cursive">Brush Script MT</option>
+    </select>
+
+    <label for="fontSize">Font Size (px):</label>
+    <input type="number" id="fontSize" value="60" min="1" max="500" oninput="drawPreview()">
+    
+
+    <label for="fontColor">Font Color:</label>
+    <input type="color" id="fontColor" value="#000000" oninput="drawPreview()" />
+    
+
+    <!-- Real-time X and Y sliders -->
+    <div class="slider-container">
+      <label for="posX">X Position:</label>
+      <input type="range" id="posX" min="0" max="100" value="50" oninput="drawPreview()">
+    </div>
+    <div class="slider-container">
+      <label for="posY">Y Position:</label>
+      <input type="range" id="posY" min="0" max="100" value="52" oninput="drawPreview()">
+    </div>
+
+    <h3>Template Preview:</h3>
+    <canvas id="previewCanvas"></canvas>
+
+    <button onclick="generateCertificates()">Generate and Download ZIP</button>
+  </div>
+
+<script>
+let templateImg = null;
+
+function previewTemplate() {
+  const file = document.getElementById("templateFile").files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      templateImg = new Image();
+      templateImg.onload = function() {
+        drawPreview();
+      };
+      templateImg.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function drawPreview() {
+  if (!templateImg) return;
+
+  const canvas = document.getElementById("previewCanvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = templateImg.width;
+  canvas.height = templateImg.height;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(templateImg, 0, 0, canvas.width, canvas.height);
+
+  const name = "Sample Name"; // Placeholder preview name
+  const fontStyle = document.getElementById("fontStyle").value;
+  const fontSize = document.getElementById("fontSize").value;
+  const fontColor = document.getElementById("fontColor").value;
+
+  const xPercent = document.getElementById("posX").value;
+  const yPercent = document.getElementById("posY").value;
+
+  ctx.font = `${fontSize}px ${fontStyle}`;
+  ctx.fillStyle = fontColor;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const x = (xPercent / 100) * canvas.width;
+  const y = (yPercent / 100) * canvas.height;
+
+  ctx.fillText(name, x, y);
+}
+
+async function generateCertificates() {
+  const excelFile = document.getElementById("excelFile").files[0];
+  const templateFile = document.getElementById("templateFile").files[0];
+  const fontStyle = document.getElementById("fontStyle").value;
+  const fontSize = document.getElementById("fontSize").value;
+  const fontColor = document.getElementById("fontColor").value;
+
+  const xPercent = document.getElementById("posX").value;
+  const yPercent = document.getElementById("posY").value;
+
+  if (!excelFile || !templateFile) {
+    alert("Please upload both files!");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.readAsArrayBuffer(excelFile);
+  reader.onload = async function(e) {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+    if (jsonData.length === 0) {
+      alert("Excel file is empty or incorrectly formatted.");
+      return;
+    }
+
+    const templateReader = new FileReader();
+    templateReader.readAsDataURL(templateFile);
+    templateReader.onload = async function(e) {
+      const templateSrc = e.target.result;
+      const img = new Image();
+      img.src = templateSrc;
+
+      img.onload = async function() {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        const zip = new JSZip();
+
+        for (const row of jsonData) {
+          const name = row["Name"];
+          if (!name) continue;
+
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          ctx.font = `${fontSize}px ${fontStyle}`;
+          ctx.fillStyle = fontColor;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+
+          const x = (xPercent / 100) * canvas.width;
+          const y = (yPercent / 100) * canvas.height;
+
+          ctx.fillText(name, x, y);
+
+          const imgData = canvas.toDataURL("image/png");
+          const response = await fetch(imgData);
+          const blob = await response.blob();
+
+          const safeName = name.replace(/[^a-zA-Z0-9]/g, "_") + ".png";
+          zip.file(safeName, blob);
+        }
+
+        zip.generateAsync({ type: "blob" }).then(function(content) {
+          saveAs(content, "Certificates.zip");
+        });
+      };
+    };
+  };
+}
+</script>
+
+</body>
+</html>
